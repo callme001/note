@@ -116,7 +116,7 @@ void resize(int newCapacity) {
 #### 4. 如何决定存储的位置以及解决hash冲突
 
 从put函数说起：
-
+（由下面的代码也可以看出，HashMap是允许null作为key和值的，作为key的时候null只有一个）
 ```java
 public V put(K key, V value) {
     if (table == EMPTY_TABLE) { //判断table数组是不是空，如果是空则初始化table
