@@ -2,7 +2,7 @@
 
 [原文地址](http://ifeve.com/spring-interview-questions-and-answers/?hmsr=toutiao.io&utm_medium=toutiao.io&utm_source=toutiao.io)
 
-#### spring的声明周期
+####spring的生命周期
 
 ![](http://img.my.csdn.net/uploads/201507/12/1436713414_9075.png)
 
@@ -11,7 +11,7 @@
 Spring 是个java企业级应用的开源开发框架。Spring主要用来开发Java应用，但是有些扩展是针对构建J2EE平台的web应用。Spring 框架目标是简化Java企业级应用开发，并通过POJO为基础的编程模型促进良好的编程习惯。
 
 
-#### 使用Spring框架的好处是什么？
+####使用Spring框架的好处是什么？
 
 * 轻量：Spring 是轻量的，基本的版本大约2MB。
 * 控制反转：Spring通过控制反转实现了松散耦合，对象们给出它们的依赖，而不是创建或查找依赖的对象们。
