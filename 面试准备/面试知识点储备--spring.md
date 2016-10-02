@@ -2,16 +2,16 @@
 
 [原文地址](http://ifeve.com/spring-interview-questions-and-answers/?hmsr=toutiao.io&utm_medium=toutiao.io&utm_source=toutiao.io)
 
-##### spring的声明周期
+#### spring的声明周期
 
 ![](http://img.my.csdn.net/uploads/201507/12/1436713414_9075.png)
 
-##### 什么是spring?
+#### 什么是spring?
 
 Spring 是个java企业级应用的开源开发框架。Spring主要用来开发Java应用，但是有些扩展是针对构建J2EE平台的web应用。Spring 框架目标是简化Java企业级应用开发，并通过POJO为基础的编程模型促进良好的编程习惯。
 
 
-##### 使用Spring框架的好处是什么？
+#### 使用Spring框架的好处是什么？
 
 * 轻量：Spring 是轻量的，基本的版本大约2MB。
 * 控制反转：Spring通过控制反转实现了松散耦合，对象们给出它们的依赖，而不是创建或查找依赖的对象们。
@@ -21,25 +21,25 @@ Spring 是个java企业级应用的开源开发框架。Spring主要用来开发
 * 事务管理：Spring 提供一个持续的事务管理接口，可以扩展到上至本地事务下至全局事务（JTA）。
 * 异常处理：Spring 提供方便的API把具体技术相关的异常（比如由JDBC，Hibernate or JDO抛出的）转化为一致的unchecked 异常。
 
-##### Spring由哪些模块组成?
+#### Spring由哪些模块组成?
 
 以下是Spring 框架的基本模块：
 
-Core module
-Bean module
-Context module
-Expression Language module
-JDBC module
-ORM module
-OXM module
-Java Messaging Service(JMS) module
-Transaction module
-Web module
-Web-Servlet module
-Web-Struts module
-Web-Portlet module
+* Core module
+* Bean module
+* Context module
+* Expression Language module
+* JDBC module
+* ORM module
+* OXM module
+* Java Messaging Service(JMS) module
+* Transaction module
+* Web module
+* Web-Servlet module
+* Web-Struts module
+* Web-Portlet module
 
-##### 核心容器（应用上下文) 模块。
+#### 核心容器（应用上下文) 模块。
 
 这是基本的Spring模块，提供spring 框架的基础功能，BeanFactory 是 任何以spring为基础的应用的核心。Spring 框架建立在此模块之上，它使Spring成为一个容器。
 
