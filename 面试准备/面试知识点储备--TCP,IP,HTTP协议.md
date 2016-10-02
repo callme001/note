@@ -205,3 +205,35 @@ TCP 和 UDP 处在同一层——运输层，但是它们有很多的不同。TC
 这样，传输效率得到了很大的提升。
 
 ![](https://dn-anything-about-doc.qbox.me/TCP_IP/tcp-6-06-.png/logoblackfont)
+
+
+### 7. HTTP协议
+
+HTTP (HyperText Transfer Protocol 超文本传输协议) 基于 TCP，使用端口号 80 或 8080。
+
+每当你在浏览器里输入一个网址或点击一个链接时，浏览器就通过 HTTP 协议将网页信息从服务器提取再显示出来，这是现在使用频率最大的应用层协议。
+
+这个原理很简单：
+
+* 点击一个链接后，浏览器向服务器发起 TCP 连接；
+
+* 连接建立后浏览器发送 HTTP 请求报文，然后服务器回复响应报文；
+
+* 浏览器将收到的响应报文内容显示在网页上；
+
+* 报文收发结束，关闭 TCP 连接。
+
+* HTTP 报文会被传输层封装为 TCP 报文段，然后再被 IP 层封装为 IP 数据报。HTTP 报文的结构：
+
+![](https://dn-anything-about-doc.qbox.me/TCP_IP/tcp-7-05.png/logoblackfont)
+
+
+- 1xx 表示通知信息，如收到或正在处理。
+
+- 2xx 表示成功接收。
+
+- 3xx 表示重定向。
+
+- 4xx 表示客户的差错，如 404 表示网页未找到。
+
+- 5xx表示服务器的差错，如常见的 502 Bad Gateway。
