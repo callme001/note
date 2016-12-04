@@ -331,6 +331,109 @@ CREATE TABLE `replay` (
 
 #### 分页
 
+solr中分页和mysql中类似，主要有两个参数。一个`start`表示开始的位置（从0开始），`rows`表示每页显示的条数（如果你填0的话会不查不到数据）。
+
+![](http://i1.piimg.com/567571/997096baeee2a334.jpg)
+
+如图就是第二页start=(1*2),rows=2的数据。
+
+#### 加入中文分词
+
+solr默认对中文的分词支持不是很好，如下图
+![](http://p1.bqimg.com/567571/278f5b067a6121be.jpg)
+solr对中文是一个字一个字分隔开的。
+
+我选用的分词插件是：ik-analyzer 对高版本的solr支持比较好。
+
+[google-code官网链接](https://code.google.com/archive/p/ik-analyzer/ "google-code官网链接") 
+
+[github仓库链接](https://github.com/wks/ik-analyzer)
+
+但是solr6并不能从上面的编译拿来使用，solr6有对应的jar包，需要对应版本才行。这里给出solr6.3可用的版本
+[ik-analyzer-solr6](https://github.com/cj96248/ik-analyzer-solr6)
+需要自己下载源代码并进行编译，直接作为maven项目导入以后执行命令`mvn clean install`成功后在target目录找到jar包即可。为了方便我编译了一份上传[百度网盘](http://pan.baidu.com/s/1hs7ckIw)
+
+下载jar并拷贝到`server/solr-webapp/webapp/WEB-INF/lib`(这个目录里面的jar包在solr-webapp启动的时候都会被加载)
+
+然后打开`server/solr/for_mysql/conf/managed-schema`，添加如下代码：
+
+```
+<fieldType name="text_ik" class="solr.TextField">   
+  <analyzer type="index">
+    <tokenizer class="org.wltea.analyzer.lucene.IKTokenizerFactory" useSmart="false" />
+  </analyzer>
+  <analyzer type="query">
+    <tokenizer class="org.wltea.analyzer.lucene.IKTokenizerFactory" useSmart="true" />
+  </analyzer>
+</fieldType>
+```
+
+或者（两者选一）
+
+```
+<fieldType name="text_ik" class="solr.TextField">   
+  <analyzer type="index" useSmart="false" class="org.wltea.analyzer.lucene.IKAnalyzer"/>   
+  <analyzer type="query" useSmart="true" class="org.wltea.analyzer.lucene.IKAnalyzer"/>   
+</fieldType>
+```
+
+重启solr，进入分词页面进行分词验证。
+
+![](http://p1.bqimg.com/567571/2b6a8cdc25f58c1d.jpg)
+
+可以看见上面的一段已经被分成了几个部分。
+
+**增加自定义词库**
+
+为了提高准确率，我们还应该加入一些流行的词库、地名、院校名称、网络用语等。使得搜索更加准确。
+
+比如一些院校名称，分词的时候仍然有缺点（例如：`贵州财经学院` 是一个高校名称不应该分开）：
+
+![](http://p1.bqimg.com/567571/29da906eca5e64a0.png)
+
+首先是网上的参考文章，当然 本篇的也可以。[加入自定义词库](http://www.coin163.com/java/docs/201309/d_2835029802.html) ，[分词用到的工具](https://github.com/studyzy/imewlconverter)
+
+首先去[搜狗字典](http://pinyin.sogou.com/dict/)下载细胞词库，什么词库都可以，只要工具能转换即可。
+
+下载好词库后用工具打开并转换：
+
+![](http://p1.bqimg.com/567571/a072fec7f22e7472.jpg)
+
+把导出来的txt并重新命名为`ext.dic`。
+
+在`WEB-INF`目录下创建`classes`文件夹。
+
+在刚刚下载的solr6的那个target目录，找到`IKAnalyzer.cfg.xml`以及`stopword.dic`文件。连同上面生成的`ext.dic`文件,一起拷贝到刚刚创建的`classes`文件夹下。如图：
+
+![](http://i1.piimg.com/567571/78829040537f1a77.jpg)
+
+重启solr，再次进入分词的页面，输入 `贵州财经学院` 我们会得到如图的结果：
+
+![](http://i1.piimg.com/567571/ccf5a14c2cb8768e.jpg) 
+
+说明词库导入成功了~~~
+
+下面解释一下`IKAnalyzer.cfg.xml`里面的配置，看懂的就略过(⊙o⊙)
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">  
+<properties>  
+	<comment>IK Analyzer 扩展配置</comment>
+	<!--用户可以在这里配置自己的扩展字典 
+	<entry key="ext_dict">ext.dic;</entry> 
+	-->
+	<entry key="ext_dict">ext.dic;</entry> 
+	<!--用户可以在这里配置自己的扩展停止词字典-->
+	<entry key="ext_stopwords">stopword.dic;</entry> 
+	
+</properties>
+```
+
+只要把文件`IKAnalyzer.cfg.xml`打开看过的应该都一目了然了。。。
+
+#### 自动从数据库中更新数据
+
 mysql开启远程访问：
 
 ```
