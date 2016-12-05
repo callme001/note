@@ -412,7 +412,7 @@ solr对中文是一个字一个字分隔开的。
 ![](http://i1.piimg.com/567571/ccf5a14c2cb8768e.jpg) 
 
 说明词库导入成功了~~~
-
+ 
 下面解释一下`IKAnalyzer.cfg.xml`里面的配置，看懂的就略过(⊙o⊙)
 
 ```
@@ -432,7 +432,23 @@ solr对中文是一个字一个字分隔开的。
 
 只要把文件`IKAnalyzer.cfg.xml`打开看过的应该都一目了然了。。。
 
+**最后，需要把上面检索的字段改成`text_ik`类型**。
+
+![](http://p1.bpimg.com/567571/5ff20fa79a3fb312.jpg)
+
+
 #### 自动从数据库中更新数据
+
+[自动从数据库中更新数据并建立索引](https://wiki.apache.org/solr/DataImportHandler#Using_delta-import_command)
+
+首先为了能自动从数据库中拉取数据，不得不再次修改一下数据库。在`question`表和`replay`表中分别添加字段`last_update_time`。字段的意思就是对于本条数据最后更新的时间。**每当该条数据更新时需要把这个时间重置为当前时间**
+
+首先更改`bin/solr.in.sh`文件里面的`SOLR_TIMEZONE`的值为`GMT+8`。需要把这个更改为中国的时区，不然等下solr更新的时间会和中国有时间差。
+
+data-config.xml
+![](http://i1.piimg.com/567571/d2c543ce9253e1f6.jpg)
+
+
 
 mysql开启远程访问：
 
