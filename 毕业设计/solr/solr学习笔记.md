@@ -437,7 +437,7 @@ solr对中文是一个字一个字分隔开的。
 ![](http://p1.bpimg.com/567571/5ff20fa79a3fb312.jpg)
 
 
-#### 自动从数据库中更新数据
+#### 从数据库中更新数据
 
 [自动从数据库中更新数据并建立索引](https://wiki.apache.org/solr/DataImportHandler#Using_delta-import_command)
 
@@ -445,15 +445,75 @@ solr对中文是一个字一个字分隔开的。
 
 首先更改`bin/solr.in.sh`文件里面的`SOLR_TIMEZONE`的值为`GMT+8`。需要把这个更改为中国的时区，不然等下solr更新的时间会和中国有时间差。
 
-data-config.xml
-![](http://i1.piimg.com/567571/d2c543ce9253e1f6.jpg)
+我们进行一次full-import以后打开和`data-config.xml`同一级别目录的`dataimport.properties`文件，进去可以看见有last_index_time等属性，这个就是最后一次建立索引的时间。
 
+solr是如何进行增量建立索引的呢？就是通过建立最后一次索引的时间去和数据库中最后更新时间进行对比，当数据库最后修改时间在最后一次建立索引的时间之后时，就说明数据库中的数据已经更新了。需要我们重新增量把更新后的数据更新到solr的索引中。而最后一次建立索引的时间就记录在`dataimport.properties`文件中。
 
-
-mysql开启远程访问：
+为了简便我们从数据库中更新数据，需要把`data-config.xml`该成下面的代码（等下解释节点属性的涵义）：
 
 ```
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'passowrd' WITH GRANT OPTION;
+<document>   
+    <entity dateSource="fromMysql" pk="id"  name="replay" query="SELECT * FROM replay" deltaQuery="SELECT id FROM replay WHERE last_update_time > '${dataimporter.last_index_time}'" deltaImportQuery="SELECT * FROM replay WHERE id='${dataimporter.delta.id}'" >
+         <field column="id" name="id"/>
+         <field column="content" name="content"/>
+	     <field column="create_time" name="create_time"/>
 
-flush privileges;
+        <entity pk="q_id" name="question" query="SELECT title FROM question WHERE id=${replay.q_id}"  deltaQuery="SELECT id as q_id  FROM question WHERE  last_update_time > '${dataimporter.last_index_time}'" parentDeltaQuery="SELECT id FROM replay WHERE q_id=${question.q_id}"  >
+            <field column="title" name="title" />
+                <field column="q_id" name="q_id"/> 
+        </entity>
+    </entity>   
+</document>   
 ```
+
+其它文件不需要改动，一样可以做到检索title字段和content字段。
+
+首先query属性不用说，这是在进行full-import时用到的查询语句。
+
+被包含的`entity`节点是查询出某篇回复所属的标题的内容，需要用`q_id`查询。
+
+重点说一下`deltaQuery`和`deltaImportQuery`以及`parentDeltaQuery`。
+
+> * The query gives the data needed to populate fields of the Solr document in full-import
+> * The deltaImportQuery gives the data needed to populate fields when running a delta-import
+> * The deltaQuery gives the primary keys of the current entity which have changes since the last index time
+> * The parentDeltaQuery uses the changed rows of the current table (fetched with deltaQuery) to give the changed rows in the parent table. This is necessary because whenever a row in the child table changes, we need to re-generate the document which has that field.
+
+先给出文档上面的解释。然后说一下我的理解，如果有偏差的地方还请指出：
+
+* `deltaQuery`是查询出哪些数据需要更新的SQL语句，例如：`SELECT id FROM replay WHERE last_update_time > '${dataimporter.last_index_time}'` 就是把数据库中更新时间在建立索引时间之后的数据的主键查询出来，`'${dataimporter.last_index_time}'`就是`dataimport.properties`文件中的时间。
+* `deltaImportQuery`是确定需要把数据查询并重新建立索引，其中的ID数据来自`deltaQuery`的查询。`'${dataimporter.delta.id}'`就是`deltaQuery`产生的id。查询的时候字段应和query查询的字段保持一致。
+* `parentDeltaQuery`是用于子表的，例如上述 对于每个回复  这篇帖子的标题 对于每条回复来说就是子表，因为每条回复信息里面都包含了标题的内容。对于这种情况，例如很多时候，回复并没有更新。但是标题却更新了，更新的时候就需要用到这个属性。并且`parentDeltaQuery="SELECT id FROM replay WHERE q_id=${question.q_id}"`注意查询的表并不是`question`表。而且`${question.q_id}`是来自`deltaQuery`查询得来得，和前面根节点的不一样。
+
+到现在为止，已经能正确的从数据库中更新数据了。包括question表更新时也能正确更新到索引中。
+
+但是还有一种情况没有处理，那就是我们只处理了更新的情况。但是还有一种情况，就是我们如果是在数据库中删除了索引，也要能正确的反应到solr的索引中。
+
+为了能把删除反应到solr中，我们需要在mysql中建立一个用于识别‘删除’的字段，这里的删除并不是真的从mysql中删除，而是用一个字段表示这条数据已经是废弃的。这里我们分别在`question`和`replay`表中新建一个int类型的`is_delete`字段。我们规定当这个字段值为1时该条数据默认被删除。
+
+在`name="replay"`的`entity`节点上新加一个属性：`deletedPkQuery="SELECT id FROM replay AS r WHERE r.q_id in ( SELECT id FROM question WHERE is_delete =1) OR r.is_delete = 1"`
+
+完成后代码如下：
+
+```
+<document>   
+    <entity dateSource="fromMysql" pk="id"  name="replay" query="SELECT * FROM replay" deltaQuery="SELECT id FROM replay WHERE last_update_time > '${dataimporter.last_index_time}'" deltaImportQuery="SELECT * FROM replay WHERE id='${dataimporter.delta.id}'" deletedPkQuery="SELECT id FROM replay AS r WHERE r.q_id in ( SELECT id FROM question WHERE is_delete =1) OR r.is_delete = 1">
+         <field column="id" name="id"/>
+         <field column="content" name="content"/>
+	     <field column="create_time" name="create_time"/>
+
+        <entity pk="q_id" name="question" query="SELECT title FROM question WHERE id=${replay.q_id}"  deltaQuery="SELECT id as q_id  FROM question WHERE  last_update_time > '${dataimporter.last_index_time}'" parentDeltaQuery="SELECT id FROM replay WHERE q_id=${question.q_id}"  >
+            <field column="title" name="title" />
+                <field column="q_id" name="q_id"/> 
+        </entity>
+    </entity>   
+</document>   
+```
+
+达到的效果是：如果我们标识了`replay`表的某条数据为is_delete时，进行增量索引时会把这条数据从索引中删除。当我们把`question`表的某条数据的`is_delete`为1时，进行增量索引时会把所有q_id和标识相等的所有数据从索引中删除。效果类似与mysql中的关联删除。当我们把某条question删除时，与之关联的replay的数据也要删除。
+
+到目前为止，已经能按照我们的需求进行增量索引了。
+
+#### 自动进行增量索引
+
+
