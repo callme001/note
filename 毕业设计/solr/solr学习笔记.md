@@ -1,11 +1,22 @@
-solr是一个全文检索框架
+Solr是Apache Lucene项目的开源企业搜索平台。其主要功能包括全文检索、命中标示、分面搜索、动态聚类、数据库集成，以及富文本（如Word、PDF）的处理。Solr是高度可扩展的，并提供了分布式搜索和索引复制。Solr是最流行的企业级搜索引擎，Solr 4还增加了NoSQL支持。
 
 [官网地址](http://lucene.apache.org/solr/)
 [文档下载](http://apache.mirror.vexxhost.com/lucene/solr/ref-guide/apache-solr-ref-guide-6.3.pdf)
 
+通过该篇笔记，可以使用到solr的以下几个功能点：
+
+* 从Mysql中获取到数据并创建索引
+* 进行简单的多表查询、以及从不同表的不同字段进行全文检索（该篇笔记以一个常见的场景进行了演示，即：帖子标题表以及帖子回复表，根据关键字进行标题以及帖子回复的内容进行全文检索）
+* 检索结果的分页、以及高亮显示
+* 集成中文分词插件ik-analyzer以及从各大词库制作自定义词库（演示了从搜狗输入法词库导入）
+* 增量索引，包括数据的增加、修改、删除
+* 自动进行增量索引
+
+
 ### 开始使用
 
 准备环境：JDK1.8(最低版本)
+
 本文演示solr版本：6.3.0
 
 建议尽量在linux或者类unix环境中运行使用solr。这里，我搭建了一个ubuntu 16的虚拟机用来演示运行。
@@ -16,7 +27,7 @@ solr是一个全文检索框架
 
 ![](http://p1.bqimg.com/567571/be07530f727cfba9.jpg)
 
-#### 启动
+##### 启动
 
 1. linux下进入目录后执行：`bin/solr start`
 2. windows下进入目录后执行:`bin/solr.cmd start`
@@ -38,7 +49,7 @@ linux下面启动成功如图：
 	* dih： This example starts Solr in standalone mode with the DataImportHandler (DIH) enabled and several example dataconfig.xml files pre-configured for different types of data supported with DIH (such as, database contents, email, RSS feeds, etc.). The configset used is customized for DIH, and is found in $SOLR_HOME/example/example-DIH/solr/conf. For more information about DIH, see the section Uploading Structured Data Store Data with the Data Import Handler.
 	* schemaless： This example starts Solr in standalone mode using a managed schema, as described in the section Schema Factory Definition in SolrConfig, and provides a very minimal pre-defined schema. Solr will run in Schemaless Mode with this configuration, where Solr will create fields in the schema on the fly and will guess field types used in incoming documents. The configset used can be found in $SOLR_HOME/server/solr/configsets/data_driven_schema_configs.
 
-#### 创建一个Core
+### 创建一个Core
 
 如果我们在启动solr的时候没有启动任何示例配置的情况下，我们需要创建一个core并创建索引。
 
@@ -48,13 +59,13 @@ linux下面启动成功如图：
 
 ![](http://p1.bpimg.com/567571/f7ac5059e984549f.jpg)
 
-#### 增加一个文件夹的索引
+### 增加一个文件夹的索引
 
 创建文件的索引需要用到post这个工具，这里我们以创建一个文件夹(当前目录下的docs文件夹)的索引为例：
 
 执行命令`bin/post -c start docs/`稍等一下等命令执行完毕，`start`是我们上面刚刚创建的core，docs是我们当前目录的文件夹。如此创建完毕后就可以开始使用搜索功能了。
 
-#### 体验简单的搜索
+### 体验简单的搜索
 
  这里为了方便我就不在虚拟机里面进行搜索了，记住了虚拟机的IP地址就可以在主机访问。
 
@@ -73,7 +84,7 @@ linux下面启动成功如图：
 从速度可以看出，检索查询的速度快快哒。
 
 
-#### 从mysql导入数据到solr
+### 从mysql导入数据到solr
 
 https://wiki.apache.org/solr/DataImportHandler#A_shorter_data-config
 
@@ -193,7 +204,7 @@ CREATE TABLE `replay` (
 
 至此，从mysql导入数据到solr完成，接下来就是如何进行简单的全文检索了~~~
 
-#### 同一张表中不同字段的检索
+### 同一张表中不同字段的检索
 
 进入`server/solr/for_mysql/conf`目录，打开`managed-schema`这个文件，加入以下代码：
 
@@ -234,7 +245,7 @@ CREATE TABLE `replay` (
 
 在df填入上面配置的text后直接搜索3就能得到和上面一样的结果。。。是不是更加方便了呢~~
 
-#### 多表查询
+### 多表查询
 
 先看一个非常常用的需求，如同我们上面建立的两张表。如果我们做搜索功能，肯定是从标题和回复的内容中做检索。这久涉及到了从不同的两张表查询的需求。
 
@@ -300,7 +311,7 @@ CREATE TABLE `replay` (
 应该是能分别检索出我们想要的结果。但是会有一个问题，下节会说到。
 
 
-#### 简单的去除重复和高亮检索中的文本
+### 简单的去除重复和高亮检索中的文本
 
 **去重**
 从上面的查询不难看出有一个非常严重的问题，当我们在以标题搜索的时候。会导致把标题和搜索内容高度重合的所有回答都检索出来，很明显。这样不是我们想要的结果，应该尽量避免这种情况出现。我试着用知乎的搜索功能找到一个标题搜索了一下，不会重复出现。但是会出现一个尽量和搜索内容高度吻合的答案，这里我们使用solr的分组（group）的功能也能达到需要的效果：
@@ -329,7 +340,7 @@ CREATE TABLE `replay` (
 ![](http://p1.bqimg.com/567571/1bb01c678633ccaa.jpg)
 
 
-#### 分页
+### 分页
 
 solr中分页和mysql中类似，主要有两个参数。一个`start`表示开始的位置（从0开始），`rows`表示每页显示的条数（如果你填0的话会不查不到数据）。
 
@@ -337,7 +348,7 @@ solr中分页和mysql中类似，主要有两个参数。一个`start`表示开�
 
 如图就是第二页start=(1*2),rows=2的数据。
 
-#### 加入中文分词
+### 加入中文分词
 
 solr默认对中文的分词支持不是很好，如下图
 ![](http://p1.bqimg.com/567571/278f5b067a6121be.jpg)
@@ -437,7 +448,7 @@ solr对中文是一个字一个字分隔开的。
 ![](http://p1.bpimg.com/567571/5ff20fa79a3fb312.jpg)
 
 
-#### 从数据库中更新数据
+### 从数据库中更新数据
 
 [自动从数据库中更新数据并建立索引](https://wiki.apache.org/solr/DataImportHandler#Using_delta-import_command)
 
@@ -514,6 +525,121 @@ solr是如何进行增量建立索引的呢？就是通过建立最后一次索�
 
 到目前为止，已经能按照我们的需求进行增量索引了。
 
-#### 自动进行增量索引
+### 自动进行增量索引
+
+自动进行增量索引，solr给出了一个类似于插件的类库。当我们启动jetty服务的时候启动一个定时服务，原理就是每隔一段时间进行一次增量索引的请求。这样就达到了自动进行增量索引的效果。
+
+原作者github连接[solr-data-import-scheduler](https://github.com/mbonaci/solr-data-import-scheduler)
+
+但是原来的基础上有bug，于是又有作者在此基础上改进并增加了功能。[文章链接](http://www.sxt.cn/u/756/blog/4231)
+
+但是作者的在solr6.3版本中呢，又有一点小问题。所以把源码下载下来改了一下编译放到github，由于没有找到[改进版本](http://www.sxt.cn/u/756/blog/4231)的github地址，所以我直接从原作者那里fork了一份过来。地址为：[链接]()
 
 
+1. 首先，下载`apache-solr-dataimportscheduler.jar`和solr自带的 `apache-solr-dataimporthandler-6.3.0.jar`, `apache-solr-dataimporthandler-extras-6.3.0.jar`后面两个jar在dist目录可以找到，如果是按照前面的步骤来的话，只用`apache-solr-dataimporthandler-extras-6.3.0.jar`以及`apache-solr-dataimportscheduler.jar`。把这两个jar复制到`server/solr-webapp/webapp/WEB-INF/lib`目录。
+
+
+2. 并在`web.xml`的servlet节点前加入一个节点，代码如下
+
+```
+<listener>
+  <listener-class>org.apache.solr.handler.dataimport.scheduler.ApplicationListener</listener-class>
+</listener>
+```
+
+3. 在`server/solr`下创建一个文件夹`conf`.创建一个名为`dataimport.properties`文件，文件内容为：
+
+```
+#################################################
+#                                               
+#
+#      dataimport scheduler properties         
+#
+#                                              
+#
+#################################################
+
+ 
+
+#to sync or not to sync
+
+# 1 - active; anything else - inactive
+
+syncEnabled=1
+
+ 
+
+# which cores to schedule
+
+# in a multi-core environment you can decide which cores you want syncronized
+
+# leave empty or comment it out if using single-core deployment
+
+syncCores=for_mysql
+
+ 
+
+# solr server name or IP address
+
+# [defaults to localhost if empty]
+
+server=localhost
+
+ 
+
+# solr server port
+
+# [defaults to 80 if empty]
+
+port=8983
+
+ 
+
+# application name/context
+
+# [defaults to current ServletContextListener's context (app) name]
+
+webapp=solr
+
+ 
+
+# URL params [mandatory]
+
+# remainder of URL
+
+params=/dataimport?command=delta-import&clean=false&commit=true
+
+ 
+
+# schedule interval
+
+# number of minutes between two runs
+
+# [defaults to 30 if empty]
+
+interval=1
+
+ 
+
+# 重做索引的时间间隔，单位分钟，默认7200，即5天; 
+
+# 为空,为0,或者注释掉:表示永不重做索引
+
+reBuildIndexInterval=7200
+
+ 
+
+# 重做索引的参数
+
+reBuildIndexParams=/dataimport?command=full-import&clean=true&commit=true
+
+
+# 重做索引时间间隔的计时开始时间，第一次真正执行的时间=reBuildIndexBeginTime+reBuildIndexInterval*60*1000；
+
+# 两种格式：2012-04-11 03:10:00 或者  03:10:00，后一种会自动补全日期部分为服务启动时的日期
+
+reBuildIndexBeginTime=03:10:00
+
+```
+
+4. 完毕后，我们重新启动solr。我们尝试修改一条数据并更新数据的最后修改时间。大约过一分钟我们直接查询就能看到更新后的数据了
